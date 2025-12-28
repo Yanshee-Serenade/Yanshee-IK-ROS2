@@ -5,35 +5,43 @@
 #include <cmath>
 
 // 测试连杆长度恒定性的函数
-void testLinkLengthInvariance() {
-    std::cout << "=== Testing link length invariance ===" << std::endl;
+void testLinkLengthInvariance(bool is_right_leg) {
+    std::string leg_name = is_right_leg ? "Right" : "Left";
+    std::cout << "=== Testing " << leg_name << " leg link length invariance ===" << std::endl;
     
-    ForwardKinematics fk;
+    ForwardKinematics fk(is_right_leg);
     
     // 设置随机数生成器
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dist(-M_PI/2, M_PI/2);  // 关节角度范围
+    
+    // 获取关节限制
+    ForwardKinematics::JointLimits limits = fk.getJointLimits();
     
     int numTests = 100;
     int passedTests = 0;
     
     for (int i = 0; i < numTests; ++i) {
-        // 生成随机关节角度
-        double q6 = dist(gen);
-        double q7 = dist(gen);
-        double q8 = dist(gen);
-        double q9 = dist(gen);
+        // 生成随机关节角度（在关节限制范围内）
+        std::uniform_real_distribution<> dist1(limits.theta1_lower, limits.theta1_upper);
+        std::uniform_real_distribution<> dist2(limits.theta2_lower, limits.theta2_upper);
+        std::uniform_real_distribution<> dist3(limits.theta3_lower, limits.theta3_upper);
+        std::uniform_real_distribution<> dist4(limits.theta4_lower, limits.theta4_upper);
+        
+        double theta1 = dist1(gen);
+        double theta2 = dist2(gen);
+        double theta3 = dist3(gen);
+        double theta4 = dist4(gen);
         
         // 验证连杆长度
-        bool valid = fk.validateLinkLengths(q6, q7, q8, q9, 1e-9);
+        bool valid = fk.validateLinkLengths(theta1, theta2, theta3, theta4, 1e-9);
         
         if (valid) {
             passedTests++;
         } else {
             std::cout << "Test " << i+1 << " failed with angles: "
-                      << "q6=" << q6 << ", q7=" << q7 
-                      << ", q8=" << q8 << ", q9=" << q9 << std::endl;
+                      << "theta1=" << theta1 << ", theta2=" << theta2 
+                      << ", theta3=" << theta3 << ", theta4=" << theta4 << std::endl;
         }
         
         // 每10个测试输出一次进度
@@ -52,10 +60,12 @@ void testLinkLengthInvariance() {
 }
 
 // 测试边界情况
-void testBoundaryConditions() {
-    std::cout << "\n=== Testing boundary conditions ===" << std::endl;
+void testBoundaryConditions(bool is_right_leg) {
+    std::string leg_name = is_right_leg ? "Right" : "Left";
+    std::cout << "\n=== Testing " << leg_name << " leg boundary conditions ===" << std::endl;
     
-    ForwardKinematics fk;
+    ForwardKinematics fk(is_right_leg);
+    ForwardKinematics::JointLimits limits = fk.getJointLimits();
     
     // 测试零角度
     std::cout << "Testing zero angles..." << std::endl;
@@ -65,21 +75,21 @@ void testBoundaryConditions() {
     // 测试关节极限
     std::cout << "Testing joint limits..." << std::endl;
     
-    // Servo_6 极限
-    assert(fk.validateLinkLengths(-1.5699994666265709, 0.0, 0.0, 0.0));  // lower
-    assert(fk.validateLinkLengths(1.5700005333734293, 0.0, 0.0, 0.0));   // upper
+    // theta1 极限
+    assert(fk.validateLinkLengths(limits.theta1_lower, 0.0, 0.0, 0.0));
+    assert(fk.validateLinkLengths(limits.theta1_upper, 0.0, 0.0, 0.0));
     
-    // Servo_7 极限
-    assert(fk.validateLinkLengths(0.0, -1.049999813158908, 0.0, 0.0));   // lower
-    assert(fk.validateLinkLengths(0.0, 2.0900001868410922, 0.0, 0.0));   // upper
+    // theta2 极限
+    assert(fk.validateLinkLengths(0.0, limits.theta2_lower, 0.0, 0.0));
+    assert(fk.validateLinkLengths(0.0, limits.theta2_upper, 0.0, 0.0));
     
-    // Servo_8 极限
-    assert(fk.validateLinkLengths(0.0, 0.0, -1.3299998161116362, 0.0));  // lower
-    assert(fk.validateLinkLengths(0.0, 0.0, 1.810000183888364, 0.0));    // upper
+    // theta3 极限
+    assert(fk.validateLinkLengths(0.0, 0.0, limits.theta3_lower, 0.0));
+    assert(fk.validateLinkLengths(0.0, 0.0, limits.theta3_upper, 0.0));
     
-    // Servo_9 极限
-    assert(fk.validateLinkLengths(0.0, 0.0, 0.0, -1.9200004959175843));  // lower
-    assert(fk.validateLinkLengths(0.0, 0.0, 0.0, 1.2199995040824159));   // upper
+    // theta4 极限
+    assert(fk.validateLinkLengths(0.0, 0.0, 0.0, limits.theta4_lower));
+    assert(fk.validateLinkLengths(0.0, 0.0, 0.0, limits.theta4_upper));
     
     std::cout << "✓ All boundary conditions passed" << std::endl;
 }
@@ -88,7 +98,8 @@ void testBoundaryConditions() {
 void testCreateTransform() {
     std::cout << "\n=== Testing createTransform function ===" << std::endl;
     
-    ForwardKinematics fk;
+    // 创建任意ForwardKinematics对象（腿类型不影响此测试）
+    ForwardKinematics fk(true);
     
     // 测试零旋转
     Eigen::Vector3d translation(1.0, 2.0, 3.0);
@@ -124,14 +135,55 @@ void testCreateTransform() {
     std::cout << "✓ 90-degree rotation transform test passed" << std::endl;
 }
 
+// 测试关节角度有效性
+void testJointAnglesValidity(bool is_right_leg) {
+    std::string leg_name = is_right_leg ? "Right" : "Left";
+    std::cout << "\n=== Testing " << leg_name << " leg joint angles validity ===" << std::endl;
+    
+    ForwardKinematics fk(is_right_leg);
+    ForwardKinematics::JointLimits limits = fk.getJointLimits();
+    
+    // 测试有效角度
+    std::cout << "Testing valid joint angles..." << std::endl;
+    
+    // 测试中间角度
+    double theta1_mid = (limits.theta1_lower + limits.theta1_upper) / 2;
+    double theta2_mid = (limits.theta2_lower + limits.theta2_upper) / 2;
+    double theta3_mid = (limits.theta3_lower + limits.theta3_upper) / 2;
+    double theta4_mid = (limits.theta4_lower + limits.theta4_upper) / 2;
+    
+    auto positions = fk.computeAllJointPositions(theta1_mid, theta2_mid, theta3_mid, theta4_mid);
+    assert(positions.size() == 6);
+    std::cout << "✓ Middle angles test passed" << std::endl;
+    
+    // 测试极限角度组合
+    std::cout << "Testing limit combinations..." << std::endl;
+    assert(fk.validateLinkLengths(limits.theta1_lower, limits.theta2_lower, 
+                                  limits.theta3_lower, limits.theta4_lower));
+    assert(fk.validateLinkLengths(limits.theta1_upper, limits.theta2_upper, 
+                                  limits.theta3_upper, limits.theta4_upper));
+    std::cout << "✓ Limit combinations test passed" << std::endl;
+}
+
 int main() {
     std::cout << "Running ForwardKinematics unit tests..." << std::endl;
     std::cout << "======================================" << std::endl;
     
     try {
+        // 测试基础功能
         testCreateTransform();
-        testBoundaryConditions();
-        testLinkLengthInvariance();
+        
+        // 测试右腿
+        std::cout << "\n=== Testing Right Leg ===" << std::endl;
+        testBoundaryConditions(true);
+        testLinkLengthInvariance(true);
+        testJointAnglesValidity(true);
+        
+        // 测试左腿
+        std::cout << "\n=== Testing Left Leg ===" << std::endl;
+        testBoundaryConditions(false);
+        testLinkLengthInvariance(false);
+        testJointAnglesValidity(false);
         
         std::cout << "\n======================================" << std::endl;
         std::cout << "All unit tests completed successfully!" << std::endl;

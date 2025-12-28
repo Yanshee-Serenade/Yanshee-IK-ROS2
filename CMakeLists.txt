@@ -22,14 +22,14 @@ include_directories(
     ${EIGEN3_INCLUDE_DIRS}
 )
 
-# 添加主可执行文件（正向运动学）
-add_executable(forward_kinematics
+add_executable(inverse_kinematics_demo
     src/ForwardKinematics.cpp
+    src/InverseKinematics.cpp
+    src/InverseKinematicsInterface.cpp
     src/main.cpp
 )
 
-# 链接 Eigen3
-target_link_libraries(forward_kinematics
+target_link_libraries(inverse_kinematics_demo
     Eigen3::Eigen
 )
 
