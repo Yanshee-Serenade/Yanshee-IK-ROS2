@@ -1,5 +1,6 @@
 #include "ForwardKinematics.h"
 #include <iostream>
+#include <cmath>
 
 using namespace Eigen;
 
@@ -16,52 +17,13 @@ ForwardKinematics::ForwardKinematics() {
     axis7 << -1, 0, 0;
     axis8 << 1, 0, 0;
     axis9 << 1, 0, 0;
+    
+    // 计算连杆长度
+    computeLinkLengths();
 }
 
-Vector3d ForwardKinematics::computeForwardKinematics(double q6, double q7, double q8, double q9) {
-    // 初始化变换矩阵为单位矩阵
-    Matrix4d T_base = Matrix4d::Identity();
-    
-    // 1. 从base_link到RightHipYaw_3（Servo_6）
-    Matrix4d T_6 = createTransform(p6, axis6, q6);
-    Matrix4d T_base_to_3 = T_base * T_6;
-    
-    // 2. 从RightHipYaw_3到RightHipPitch_3（Servo_7）
-    Matrix4d T_7 = createTransform(p7, axis7, q7);
-    Matrix4d T_base_to_4 = T_base_to_3 * T_7;
-    
-    // 3. 从RightHipPitch_3到RightKneePitch_3（Servo_8）
-    Matrix4d T_8 = createTransform(p8, axis8, q8);
-    Matrix4d T_base_to_5 = T_base_to_4 * T_8;
-    
-    // 4. 从RightKneePitch_3到DEF_RightAnklePitch_2（Servo_9）
-    Matrix4d T_9 = createTransform(p9, axis9, q9);
-    Matrix4d T_base_to_6 = T_base_to_5 * T_9;
-    
-    // 5. Servo_10的origin是固定平移
-    Vector4d p10_homogeneous;
-    p10_homogeneous << p10, 1.0;
-    Vector4d p10_in_base = T_base_to_6 * p10_homogeneous;
-    
-    return p10_in_base.head<3>();
-}
-
-Matrix4d ForwardKinematics::computeFullTransform(double q6, double q7, double q8, double q9) {
-    Matrix4d T_base = Matrix4d::Identity();
-    
-    // 链式相乘
-    T_base = T_base * createTransform(p6, axis6, q6);
-    T_base = T_base * createTransform(p7, axis7, q7);
-    T_base = T_base * createTransform(p8, axis8, q8);
-    T_base = T_base * createTransform(p9, axis9, q9);
-    
-    // 添加Servo_10的固定平移
-    T_base.block<3,1>(0,3) += T_base.block<3,3>(0,0) * p10;
-    
-    return T_base;
-}
-
-Matrix4d ForwardKinematics::createTransform(const Vector3d& translation, const Vector3d& axis, double angle) {
+Matrix4d ForwardKinematics::createTransform(const Vector3d& translation, 
+                                          const Vector3d& axis, double angle) {
     Matrix4d T = Matrix4d::Identity();
     
     // 创建旋转矩阵
@@ -74,37 +36,110 @@ Matrix4d ForwardKinematics::createTransform(const Vector3d& translation, const V
     return T;
 }
 
-MatrixXd ForwardKinematics::computeJacobian(double q6, double q7, double q8, double q9) {
-    MatrixXd J = MatrixXd::Zero(3, 4);
+std::vector<Vector3d> ForwardKinematics::computeAllJointPositions(double q6, double q7, 
+                                                                 double q8, double q9) {
+    std::vector<Vector3d> positions;
     
-    // 计算每个关节变换后的位置
-    Matrix4d T0 = Matrix4d::Identity();
-    Matrix4d T1 = T0 * createTransform(p6, axis6, q6);
-    Matrix4d T2 = T1 * createTransform(p7, axis7, q7);
-    Matrix4d T3 = T2 * createTransform(p8, axis8, q8);
-    Matrix4d T4 = T3 * createTransform(p9, axis9, q9);
+    // 1. base_link 位置 (原点)
+    positions.push_back(Vector3d::Zero());
     
-    // 末端执行器位置（Servo_10原点）
-    Vector4d p_end_homo = T4 * Vector4d(p10[0], p10[1], p10[2], 1);
-    Vector3d p_end = p_end_homo.head<3>();
+    // 2. Servo_6 (RightHipYaw_3) 位置
+    Matrix4d T_base = Matrix4d::Identity();
+    Matrix4d T_6 = createTransform(p6, axis6, q6);
+    Matrix4d T_base_to_3 = T_base * T_6;
+    Vector4d pos_6_homo = T_base_to_3 * Vector4d(0, 0, 0, 1);
+    positions.push_back(pos_6_homo.head<3>());
     
-    // 计算每个关节轴在base_link中的方向
-    Vector3d z0 = axis6;
-    Vector3d z1 = T1.block<3,3>(0,0) * axis7;
-    Vector3d z2 = T2.block<3,3>(0,0) * axis8;
-    Vector3d z3 = T3.block<3,3>(0,0) * axis9;
+    // 3. Servo_7 (RightHipPitch_3) 位置
+    Matrix4d T_7 = createTransform(p7, axis7, q7);
+    Matrix4d T_base_to_4 = T_base_to_3 * T_7;
+    Vector4d pos_7_homo = T_base_to_4 * Vector4d(0, 0, 0, 1);
+    positions.push_back(pos_7_homo.head<3>());
     
-    // 计算每个关节原点的位置
-    Vector3d p0 = Vector3d::Zero();
-    Vector3d p1 = T1.block<3,1>(0,3);
-    Vector3d p2 = T2.block<3,1>(0,3);
-    Vector3d p3 = T3.block<3,1>(0,3);
+    // 4. Servo_8 (RightKneePitch_3) 位置
+    Matrix4d T_8 = createTransform(p8, axis8, q8);
+    Matrix4d T_base_to_5 = T_base_to_4 * T_8;
+    Vector4d pos_8_homo = T_base_to_5 * Vector4d(0, 0, 0, 1);
+    positions.push_back(pos_8_homo.head<3>());
     
-    // 计算雅可比矩阵的每一列
-    J.col(0) = z0.cross(p_end - p0);
-    J.col(1) = z1.cross(p_end - p1);
-    J.col(2) = z2.cross(p_end - p2);
-    J.col(3) = z3.cross(p_end - p3);
+    // 5. Servo_9 (DEF_RightAnklePitch_2) 位置
+    Matrix4d T_9 = createTransform(p9, axis9, q9);
+    Matrix4d T_base_to_6 = T_base_to_5 * T_9;
+    Vector4d pos_9_homo = T_base_to_6 * Vector4d(0, 0, 0, 1);
+    positions.push_back(pos_9_homo.head<3>());
     
-    return J;
+    // 6. Servo_10 origin 位置
+    Vector4d pos_10_homo = T_base_to_6 * Vector4d(p10[0], p10[1], p10[2], 1);
+    positions.push_back(pos_10_homo.head<3>());
+    
+    return positions;
+}
+
+bool ForwardKinematics::validateLinkLengths(double q6, double q7, double q8, double q9, 
+                                          double tolerance) {
+    // 计算所有关节位置
+    std::vector<Vector3d> positions = computeAllJointPositions(q6, q7, q8, q9);
+    
+    // 验证连杆长度
+    bool valid = true;
+    
+    // 关节6到关节7的距离
+    double dist_6_7 = computeDistance(positions[1], positions[2]);
+    if (std::abs(dist_6_7 - linkLengths.length_6_7) > tolerance) {
+        std::cout << "Link 6-7 length mismatch: expected " << linkLengths.length_6_7 
+                  << ", got " << dist_6_7 << std::endl;
+        valid = false;
+    }
+    
+    // 关节7到关节8的距离
+    double dist_7_8 = computeDistance(positions[2], positions[3]);
+    if (std::abs(dist_7_8 - linkLengths.length_7_8) > tolerance) {
+        std::cout << "Link 7-8 length mismatch: expected " << linkLengths.length_7_8 
+                  << ", got " << dist_7_8 << std::endl;
+        valid = false;
+    }
+    
+    // 关节8到关节9的距离
+    double dist_8_9 = computeDistance(positions[3], positions[4]);
+    if (std::abs(dist_8_9 - linkLengths.length_8_9) > tolerance) {
+        std::cout << "Link 8-9 length mismatch: expected " << linkLengths.length_8_9 
+                  << ", got " << dist_8_9 << std::endl;
+        valid = false;
+    }
+    
+    // 关节9到关节10的距离
+    double dist_9_10 = computeDistance(positions[4], positions[5]);
+    if (std::abs(dist_9_10 - linkLengths.length_9_10) > tolerance) {
+        std::cout << "Link 9-10 length mismatch: expected " << linkLengths.length_9_10 
+                  << ", got " << dist_9_10 << std::endl;
+        valid = false;
+    }
+    
+    return valid;
+}
+
+double ForwardKinematics::computeDistance(const Vector3d& p1, const Vector3d& p2) {
+    return (p2 - p1).norm();
+}
+
+void ForwardKinematics::computeLinkLengths() {
+    // 计算base_link坐标系下的连杆长度
+    // 注意：这些是关节原点之间的距离，在关节角度为0时的长度
+    
+    // 当所有关节角度为0时的变换
+    std::vector<Vector3d> positions = computeAllJointPositions(0.0, 0.0, 0.0, 0.0);
+    
+    // 计算连杆长度
+    linkLengths.length_6_7 = computeDistance(positions[1], positions[2]);
+    linkLengths.length_7_8 = computeDistance(positions[2], positions[3]);
+    linkLengths.length_8_9 = computeDistance(positions[3], positions[4]);
+    linkLengths.length_9_10 = computeDistance(positions[4], positions[5]);
+    
+    // 输出连杆长度供参考
+    std::cout << "Link lengths (all joints at 0 position):" << std::endl;
+    std::cout << "  Link 6-7: " << linkLengths.length_6_7 << std::endl;
+    std::cout << "  Link 7-8: " << linkLengths.length_7_8 << std::endl;
+    std::cout << "  Link 8-9: " << linkLengths.length_8_9 << std::endl;
+    std::cout << "  Link 9-10: " << linkLengths.length_9_10 << std::endl;
+    std::cout << std::endl;
 }
