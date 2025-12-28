@@ -3,6 +3,7 @@
 #include <cmath>
 
 using namespace Eigen;
+using namespace std;
 
 ForwardKinematics::ForwardKinematics() {
     // 初始化URDF中定义的固定变换
@@ -18,12 +19,28 @@ ForwardKinematics::ForwardKinematics() {
     axis8 << 1, 0, 0;
     axis9 << 1, 0, 0;
     
+    // 计算x_rel常数（从关节6到末端的x方向距离，固定值）
+    x_rel_const = p7.x() + p8.x() + p9.x() + p10.x();
+    cout << "x_rel constant: " << x_rel_const << endl;
+    
+    // 设置关节限制（从URDF中获取）
+    jointLimits.theta6_lower = -1.5699994666265709;
+    jointLimits.theta6_upper = 1.5700005333734293;
+    jointLimits.theta7_lower = -1.049999813158908;
+    jointLimits.theta7_upper = 2.0900001868410922;
+    jointLimits.theta8_lower = -1.3299998161116362;
+    jointLimits.theta8_upper = 1.810000183888364;
+    jointLimits.theta9_lower = -1.9200004959175843;
+    jointLimits.theta9_upper = 1.2199995040824159;
+    jointLimits.theta10_lower = -1.5699997046774934;
+    jointLimits.theta10_upper = 1.5700002953225067;
+    
     // 计算连杆长度
     computeLinkLengths();
 }
 
 Matrix4d ForwardKinematics::createTransform(const Vector3d& translation, 
-                                          const Vector3d& axis, double angle) {
+                                          const Vector3d& axis, double angle) const {
     Matrix4d T = Matrix4d::Identity();
     
     // 创建旋转矩阵
@@ -36,9 +53,9 @@ Matrix4d ForwardKinematics::createTransform(const Vector3d& translation,
     return T;
 }
 
-std::vector<Vector3d> ForwardKinematics::computeAllJointPositions(double q6, double q7, 
-                                                                 double q8, double q9) {
-    std::vector<Vector3d> positions;
+vector<Vector3d> ForwardKinematics::computeAllJointPositions(double q6, double q7, 
+                                                            double q8, double q9) const {
+    vector<Vector3d> positions;
     
     // 1. base_link 位置 (原点)
     positions.push_back(Vector3d::Zero());
@@ -75,50 +92,55 @@ std::vector<Vector3d> ForwardKinematics::computeAllJointPositions(double q6, dou
     return positions;
 }
 
+ForwardKinematics::JointLimits ForwardKinematics::getJointLimits() const {
+    return jointLimits;
+}
+
+// 其他函数实现（保持不变）
 bool ForwardKinematics::validateLinkLengths(double q6, double q7, double q8, double q9, 
-                                          double tolerance) {
+                                          double tolerance) const {
     // 计算所有关节位置
-    std::vector<Vector3d> positions = computeAllJointPositions(q6, q7, q8, q9);
+    vector<Vector3d> positions = computeAllJointPositions(q6, q7, q8, q9);
     
     // 验证连杆长度
     bool valid = true;
     
     // 关节6到关节7的距离
     double dist_6_7 = computeDistance(positions[1], positions[2]);
-    if (std::abs(dist_6_7 - linkLengths.length_6_7) > tolerance) {
-        std::cout << "Link 6-7 length mismatch: expected " << linkLengths.length_6_7 
-                  << ", got " << dist_6_7 << std::endl;
+    if (abs(dist_6_7 - linkLengths.length_6_7) > tolerance) {
+        cout << "Link 6-7 length mismatch: expected " << linkLengths.length_6_7 
+             << ", got " << dist_6_7 << endl;
         valid = false;
     }
     
     // 关节7到关节8的距离
     double dist_7_8 = computeDistance(positions[2], positions[3]);
-    if (std::abs(dist_7_8 - linkLengths.length_7_8) > tolerance) {
-        std::cout << "Link 7-8 length mismatch: expected " << linkLengths.length_7_8 
-                  << ", got " << dist_7_8 << std::endl;
+    if (abs(dist_7_8 - linkLengths.length_7_8) > tolerance) {
+        cout << "Link 7-8 length mismatch: expected " << linkLengths.length_7_8 
+             << ", got " << dist_7_8 << endl;
         valid = false;
     }
     
     // 关节8到关节9的距离
     double dist_8_9 = computeDistance(positions[3], positions[4]);
-    if (std::abs(dist_8_9 - linkLengths.length_8_9) > tolerance) {
-        std::cout << "Link 8-9 length mismatch: expected " << linkLengths.length_8_9 
-                  << ", got " << dist_8_9 << std::endl;
+    if (abs(dist_8_9 - linkLengths.length_8_9) > tolerance) {
+        cout << "Link 8-9 length mismatch: expected " << linkLengths.length_8_9 
+             << ", got " << dist_8_9 << endl;
         valid = false;
     }
     
     // 关节9到关节10的距离
     double dist_9_10 = computeDistance(positions[4], positions[5]);
-    if (std::abs(dist_9_10 - linkLengths.length_9_10) > tolerance) {
-        std::cout << "Link 9-10 length mismatch: expected " << linkLengths.length_9_10 
-                  << ", got " << dist_9_10 << std::endl;
+    if (abs(dist_9_10 - linkLengths.length_9_10) > tolerance) {
+        cout << "Link 9-10 length mismatch: expected " << linkLengths.length_9_10 
+             << ", got " << dist_9_10 << endl;
         valid = false;
     }
     
     return valid;
 }
 
-double ForwardKinematics::computeDistance(const Vector3d& p1, const Vector3d& p2) {
+double ForwardKinematics::computeDistance(const Vector3d& p1, const Vector3d& p2) const {
     return (p2 - p1).norm();
 }
 
@@ -127,7 +149,7 @@ void ForwardKinematics::computeLinkLengths() {
     // 注意：这些是关节原点之间的距离，在关节角度为0时的长度
     
     // 当所有关节角度为0时的变换
-    std::vector<Vector3d> positions = computeAllJointPositions(0.0, 0.0, 0.0, 0.0);
+    vector<Vector3d> positions = computeAllJointPositions(0.0, 0.0, 0.0, 0.0);
     
     // 计算连杆长度
     linkLengths.length_6_7 = computeDistance(positions[1], positions[2]);
@@ -136,10 +158,10 @@ void ForwardKinematics::computeLinkLengths() {
     linkLengths.length_9_10 = computeDistance(positions[4], positions[5]);
     
     // 输出连杆长度供参考
-    std::cout << "Link lengths (all joints at 0 position):" << std::endl;
-    std::cout << "  Link 6-7: " << linkLengths.length_6_7 << std::endl;
-    std::cout << "  Link 7-8: " << linkLengths.length_7_8 << std::endl;
-    std::cout << "  Link 8-9: " << linkLengths.length_8_9 << std::endl;
-    std::cout << "  Link 9-10: " << linkLengths.length_9_10 << std::endl;
-    std::cout << std::endl;
+    cout << "Link lengths (all joints at 0 position):" << endl;
+    cout << "  Link 6-7: " << linkLengths.length_6_7 << endl;
+    cout << "  Link 7-8: " << linkLengths.length_7_8 << endl;
+    cout << "  Link 8-9: " << linkLengths.length_8_9 << endl;
+    cout << "  Link 9-10: " << linkLengths.length_9_10 << endl;
+    cout << endl;
 }

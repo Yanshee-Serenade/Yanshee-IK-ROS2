@@ -22,7 +22,7 @@ include_directories(
     ${EIGEN3_INCLUDE_DIRS}
 )
 
-# 添加主可执行文件
+# 添加主可执行文件（正向运动学）
 add_executable(forward_kinematics
     src/ForwardKinematics.cpp
     src/main.cpp
@@ -33,36 +33,51 @@ target_link_libraries(forward_kinematics
     Eigen3::Eigen
 )
 
-# 添加动态库
-add_library(forward_kinematics_dylib SHARED
-    src/ForwardKinematics.cpp
-    src/ForwardKinematicsInterface.cpp
-)
-
-# 设置动态库版本和属性
-set_target_properties(forward_kinematics_dylib PROPERTIES
-    VERSION 1.0
-    SOVERSION 1
-    OUTPUT_NAME "forward_kinematics"
-    MACOSX_RPATH ON
-)
-
-# 链接动态库的依赖
-target_link_libraries(forward_kinematics_dylib
-    Eigen3::Eigen
-)
-
-# 添加测试可执行文件
+# 添加正向运动学测试
 add_executable(forward_kinematics_test
     src/ForwardKinematics.cpp
     test/ForwardKinematicsTest.cpp
 )
 
-# 链接测试可执行文件的依赖
+# 链接正向运动学测试的依赖
 target_link_libraries(forward_kinematics_test
+    Eigen3::Eigen
+)
+
+# 添加逆运动学测试
+add_executable(inverse_kinematics_test
+    src/ForwardKinematics.cpp
+    src/InverseKinematics.cpp
+    test/InverseKinematicsTest.cpp
+)
+
+# 链接逆运动学测试的依赖
+target_link_libraries(inverse_kinematics_test
+    Eigen3::Eigen
+)
+
+# 添加动态库（包含正向和逆运动学）
+add_library(yanshee_kinematics_dylib SHARED
+    src/ForwardKinematics.cpp
+    src/ForwardKinematicsInterface.cpp
+    src/InverseKinematics.cpp
+    src/InverseKinematicsInterface.cpp
+)
+
+# 设置动态库版本和属性
+set_target_properties(yanshee_kinematics_dylib PROPERTIES
+    VERSION 1.0
+    SOVERSION 1
+    OUTPUT_NAME "yanshee_kinematics"
+    MACOSX_RPATH ON
+)
+
+# 链接动态库的依赖
+target_link_libraries(yanshee_kinematics_dylib
     Eigen3::Eigen
 )
 
 # 启用测试（如果使用CTest）
 enable_testing()
 add_test(NAME ForwardKinematicsTest COMMAND forward_kinematics_test)
+add_test(NAME InverseKinematicsTest COMMAND inverse_kinematics_test)
