@@ -108,8 +108,7 @@ InverseKinematics::IKSolution InverseKinematics::gridSearchForTheta3Theta4(
     auto limits = fk.getJointLimits();
     
     // 第一级：粗网格搜索
-    double coarseDensity = gridDensity / 2;  // 粗搜索使用一半的密度
-    if (coarseDensity < 5) coarseDensity = 5;  // 最小密度
+    double coarseDensity = gridDensity;
     
     double theta3_step_coarse = (limits.theta3_upper - limits.theta3_lower) / coarseDensity;
     double theta4_step_coarse = (limits.theta4_upper - limits.theta4_lower) / coarseDensity;
@@ -161,8 +160,8 @@ InverseKinematics::IKSolution InverseKinematics::gridSearchForTheta3Theta4(
     double theta4_min_fine = max(limits.theta4_lower, best_theta4_coarse - search_radius);
     double theta4_max_fine = min(limits.theta4_upper, best_theta4_coarse + search_radius);
     
-    // 细搜索使用更高的密度（例如粗密度的2倍）
-    int fineDensity = 20;  // 固定细搜索密度
+    // 细搜索密度
+    int fineDensity = gridDensity;
     double theta3_step_fine = (theta3_max_fine - theta3_min_fine) / fineDensity;
     double theta4_step_fine = (theta4_max_fine - theta4_min_fine) / fineDensity;
     
