@@ -56,24 +56,29 @@ target_link_libraries(inverse_kinematics_test
     Eigen3::Eigen
 )
 
-# 添加动态库（包含正向和逆运动学）
-add_library(yanshee_kinematics_dylib SHARED
+# 修改动态库部分，支持跨平台
+add_library(yanshee_kinematics SHARED
     src/ForwardKinematics.cpp
     src/ForwardKinematicsInterface.cpp
     src/InverseKinematics.cpp
     src/InverseKinematicsInterface.cpp
 )
 
-# 设置动态库版本和属性
-set_target_properties(yanshee_kinematics_dylib PROPERTIES
-    VERSION 1.0
-    SOVERSION 1
-    OUTPUT_NAME "yanshee_kinematics"
-    MACOSX_RPATH ON
-)
+# 根据平台设置不同的输出名称
+if(APPLE)
+    set_target_properties(yanshee_kinematics PROPERTIES
+        OUTPUT_NAME "yanshee_kinematics"
+        SUFFIX ".dylib"
+        MACOSX_RPATH ON
+    )
+elseif(UNIX AND NOT APPLE)
+    set_target_properties(yanshee_kinematics PROPERTIES
+        OUTPUT_NAME "yanshee_kinematics"
+        SUFFIX ".so"
+    )
+endif()
 
-# 链接动态库的依赖
-target_link_libraries(yanshee_kinematics_dylib
+target_link_libraries(yanshee_kinematics
     Eigen3::Eigen
 )
 
