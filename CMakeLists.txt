@@ -86,3 +86,17 @@ target_link_libraries(yanshee_kinematics
 enable_testing()
 add_test(NAME ForwardKinematicsTest COMMAND forward_kinematics_test)
 add_test(NAME InverseKinematicsTest COMMAND inverse_kinematics_test)
+
+# 添加性能测试
+add_executable(performance_test
+    src/ForwardKinematics.cpp
+    src/InverseKinematics.cpp
+    test/PerformanceTest.cpp
+)
+
+target_link_libraries(performance_test
+    Eigen3::Eigen
+)
+
+# 可选：添加到测试套件
+add_test(NAME PerformanceTest COMMAND performance_test)
