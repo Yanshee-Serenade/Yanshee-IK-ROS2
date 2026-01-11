@@ -49,10 +49,10 @@ int inverse_kinematics(int is_right_leg, double target_x, double target_y, doubl
     
     // 填充输出数组
     angles[0] = solution.theta1 - jointLimits.theta1_lower;
-    angles[1] = solution.theta2 - jointLimits.theta1_lower;
-    angles[2] = solution.theta3 - jointLimits.theta1_lower;
-    angles[3] = solution.theta4 - jointLimits.theta1_lower;
-    angles[4] = solution.theta5 - jointLimits.theta1_lower;
+    angles[1] = solution.theta2 - jointLimits.theta2_lower;
+    angles[2] = solution.theta3 - jointLimits.theta3_lower;
+    angles[3] = solution.theta4 - jointLimits.theta4_lower;
+    angles[4] = solution.theta5 - jointLimits.theta5_lower;
     
     // 输出误差
     *error = solution.error;
