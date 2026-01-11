@@ -9,10 +9,15 @@ void compute_last_joint_position(int is_right_leg, double theta1, double theta2,
     static ForwardKinematics fk_left(false);
     
     ForwardKinematics& fk = is_right_leg ? fk_right : fk_left;
+    ForwardKinematics::JointLimits jointLimits = fk.getJointLimits();
     
     // 计算所有关节位置
-    std::vector<Eigen::Vector3d> positions = fk.computeAllJointPositions(theta1, theta2, 
-                                                                         theta3, theta4);
+    std::vector<Eigen::Vector3d> positions = fk.computeAllJointPositions(
+        theta1 + jointLimits.theta1_lower,
+        theta2 + jointLimits.theta2_lower,
+        theta3 + jointLimits.theta3_lower,
+        theta4 + jointLimits.theta4_lower
+    );
     
     // 获取最后一个关节的位置
     const Eigen::Vector3d& last_joint_position = positions.back();
@@ -30,10 +35,15 @@ void compute_last_four_joints_positions(int is_right_leg, double theta1, double 
     static ForwardKinematics fk_left(false);
     
     ForwardKinematics& fk = is_right_leg ? fk_right : fk_left;
+    ForwardKinematics::JointLimits jointLimits = fk.getJointLimits();
     
     // 计算所有关节位置
-    std::vector<Eigen::Vector3d> positions = fk.computeAllJointPositions(theta1, theta2, 
-                                                                         theta3, theta4);
+    std::vector<Eigen::Vector3d> positions = fk.computeAllJointPositions(
+        theta1 + jointLimits.theta1_lower,
+        theta2 + jointLimits.theta2_lower,
+        theta3 + jointLimits.theta3_lower,
+        theta4 + jointLimits.theta4_lower
+    );
     
     // 填充最后四个关节的位置（从后往前数）
     int result_index = 0;

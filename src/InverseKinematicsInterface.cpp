@@ -33,6 +33,8 @@ int inverse_kinematics(int is_right_leg, double target_x, double target_y, doubl
     
     // 选择对应的腿
     InverseKinematics* ik = is_right_leg ? ik_right_instance : ik_left_instance;
+    ForwardKinematics* fk = is_right_leg ? fk_right_instance : fk_left_instance;
+    ForwardKinematics::JointLimits jointLimits = fk->getJointLimits();
     
     // 创建目标位置向量
     Eigen::Vector3d target_pos(target_x, target_y, target_z);
@@ -46,11 +48,11 @@ int inverse_kinematics(int is_right_leg, double target_x, double target_y, doubl
     }
     
     // 填充输出数组
-    angles[0] = solution.theta1;
-    angles[1] = solution.theta2;
-    angles[2] = solution.theta3;
-    angles[3] = solution.theta4;
-    angles[4] = solution.theta5;
+    angles[0] = solution.theta1 - jointLimits.theta1_lower;
+    angles[1] = solution.theta2 - jointLimits.theta1_lower;
+    angles[2] = solution.theta3 - jointLimits.theta1_lower;
+    angles[3] = solution.theta4 - jointLimits.theta1_lower;
+    angles[4] = solution.theta5 - jointLimits.theta1_lower;
     
     // 输出误差
     *error = solution.error;
