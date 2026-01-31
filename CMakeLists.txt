@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(ForwardKinematics LANGUAGES CXX)
+project(yanshee_ik LANGUAGES CXX)
 
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 11)
@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 生成编译数据库
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Find ROS2 build tools
+find_package(ament_cmake REQUIRED)
 
 # 查找 Eigen3 库
 find_package(Eigen3 REQUIRED)
@@ -157,3 +160,18 @@ add_executable(forward_performance_test
 target_link_libraries(forward_performance_test
     Eigen3::Eigen
 )
+
+# Install the shared library
+install(TARGETS yanshee_kinematics
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+# Install header files
+install(DIRECTORY include/
+    DESTINATION include
+)
+
+# ROS2 package hooks
+ament_package()
