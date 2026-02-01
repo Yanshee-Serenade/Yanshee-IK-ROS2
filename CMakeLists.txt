@@ -74,42 +74,12 @@ include_directories(
     ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_executable(inverse_kinematics_demo
-    src/ForwardKinematics.cpp
-    src/InverseKinematics.cpp
-    src/InverseKinematicsInterface.cpp
-    src/main.cpp
-)
-
-target_link_libraries(inverse_kinematics_demo
-    Eigen3::Eigen
-)
-
-# 添加正向运动学测试
-add_executable(forward_kinematics_test
-    src/ForwardKinematics.cpp
-    test/ForwardKinematicsTest.cpp
-)
-
-# 链接正向运动学测试的依赖
-target_link_libraries(forward_kinematics_test
-    Eigen3::Eigen
-)
-
-# 添加逆运动学测试
-add_executable(inverse_kinematics_test
-    src/ForwardKinematics.cpp
-    src/InverseKinematics.cpp
-    test/InverseKinematicsTest.cpp
-)
-
-# 链接逆运动学测试的依赖
-target_link_libraries(inverse_kinematics_test
-    Eigen3::Eigen
-)
-
-# 修改动态库部分，支持跨平台
+# 导出动态库
 add_library(yanshee_kinematics SHARED
+    src/ForwardArmKinematics.cpp
+    src/ForwardArmKinematicsInterface.cpp
+    src/InverseArmKinematics.cpp
+    src/InverseArmKinematicsInterface.cpp
     src/ForwardKinematics.cpp
     src/ForwardKinematicsInterface.cpp
     src/InverseKinematics.cpp
@@ -158,6 +128,17 @@ add_executable(forward_performance_test
 )
 
 target_link_libraries(forward_performance_test
+    Eigen3::Eigen
+)
+
+# 添加性能测试
+add_executable(inverse_arm_performance_test
+    src/ForwardArmKinematics.cpp
+    src/InverseArmKinematics.cpp
+    test/InverseArmPerformanceTest.cpp
+)
+
+target_link_libraries(inverse_arm_performance_test
     Eigen3::Eigen
 )
 
